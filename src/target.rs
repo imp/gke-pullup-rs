@@ -62,3 +62,107 @@ impl Target {
         Ok(version)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gke::model::server_config::ReleaseChannelConfig;
+
+    fn make_server_config() -> ServerConfig {
+        let channel_config = ReleaseChannelConfig::default()
+            .set_channel(Channel::Regular)
+            .set_upgrade_target_version("1.31.0")
+            .set_valid_versions(["1.31.0", "1.30.0"]);
+
+        ServerConfig::default()
+            .set_default_cluster_version("1.30.0")
+            .set_valid_master_versions(["1.30.0", "1.31.0"])
+            .set_channels([channel_config])
+    }
+
+    #[test]
+    fn new_with_none_returns_default() {
+        let config = make_server_config();
+        let target = Target::new(None, &config).unwrap();
+        assert!(matches!(target, Target::Default));
+    }
+
+    #[test]
+    fn new_with_channel_name_returns_channel_variant() {
+        let config = make_server_config();
+        let target = Target::new(Some("REGULAR".to_string()), &config).unwrap();
+        assert!(matches!(target, Target::Channel(Channel::Regular)));
+    }
+
+    #[test]
+    fn new_with_valid_version_returns_version_variant() {
+        let config = make_server_config();
+        let target = Target::new(Some("1.31.0".to_string()), &config).unwrap();
+        assert!(matches!(target, Target::Version(v) if v == "1.31.0"));
+    }
+
+    #[test]
+    fn new_with_invalid_version_is_error() {
+        let config = make_server_config();
+        assert!(Target::new(Some("99.99.99".to_string()), &config).is_err());
+    }
+
+    #[test]
+    fn find_compatible_version_default_returns_upgrade_target() {
+        let config = make_server_config();
+        let cluster_channel = ReleaseChannel::new().set_channel(Channel::Regular);
+        let version = Target::Default
+            .find_compatible_version(&config, cluster_channel)
+            .unwrap();
+        assert_eq!(version, "1.31.0");
+    }
+
+    #[test]
+    fn find_compatible_version_default_falls_back_to_default_cluster_version() {
+        let config = ServerConfig::default().set_default_cluster_version("1.30.0");
+        // No channel config → falls back to default_cluster_version
+        let cluster_channel = ReleaseChannel::new().set_channel(Channel::Regular);
+        let version = Target::Default
+            .find_compatible_version(&config, cluster_channel)
+            .unwrap();
+        assert_eq!(version, "1.30.0");
+    }
+
+    #[test]
+    fn find_compatible_version_channel_match_returns_upgrade_target() {
+        let config = make_server_config();
+        let cluster_channel = ReleaseChannel::new().set_channel(Channel::Regular);
+        let version = Target::Channel(Channel::Regular)
+            .find_compatible_version(&config, cluster_channel)
+            .unwrap();
+        assert_eq!(version, "1.31.0");
+    }
+
+    #[test]
+    fn find_compatible_version_channel_mismatch_is_error() {
+        let config = make_server_config();
+        let cluster_channel = ReleaseChannel::new().set_channel(Channel::Rapid);
+        let result =
+            Target::Channel(Channel::Regular).find_compatible_version(&config, cluster_channel);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn find_compatible_version_explicit_version_in_channel() {
+        let config = make_server_config();
+        let cluster_channel = ReleaseChannel::new().set_channel(Channel::Regular);
+        let version = Target::Version("1.30.0".to_string())
+            .find_compatible_version(&config, cluster_channel)
+            .unwrap();
+        assert_eq!(version, "1.30.0");
+    }
+
+    #[test]
+    fn find_compatible_version_version_not_in_channel_is_error() {
+        let config = make_server_config();
+        let cluster_channel = ReleaseChannel::new().set_channel(Channel::Regular);
+        let result = Target::Version("99.99.99".to_string())
+            .find_compatible_version(&config, cluster_channel);
+        assert!(result.is_err());
+    }
+}

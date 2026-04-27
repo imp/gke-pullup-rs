@@ -50,3 +50,76 @@ impl ServerConfigExt for ServerConfig {
             .find(|config| config.channel == channel.channel)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_server_config() -> ServerConfig {
+        let channel_config = ReleaseChannelConfig::default()
+            .set_channel(Channel::Regular)
+            .set_upgrade_target_version("1.31.0")
+            .set_valid_versions(["1.31.0", "1.30.0"]);
+
+        ServerConfig::default()
+            .set_default_cluster_version("1.30.0")
+            .set_channels([channel_config])
+    }
+
+    #[test]
+    fn release_channel_by_name_returns_matching_channel() {
+        let config = make_server_config();
+        let result = config.release_channel_by_name("REGULAR");
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn release_channel_by_name_returns_none_for_unknown() {
+        let config = make_server_config();
+        assert!(config.release_channel_by_name("RAPID").is_none());
+    }
+
+    #[test]
+    fn release_channel_config_returns_matching_config() {
+        let config = make_server_config();
+        let channel = ReleaseChannel::new().set_channel(Channel::Regular);
+        assert!(config.release_channel_config(&channel).is_some());
+    }
+
+    #[test]
+    fn release_channel_config_returns_none_for_unknown_channel() {
+        let config = make_server_config();
+        let channel = ReleaseChannel::new().set_channel(Channel::Rapid);
+        assert!(config.release_channel_config(&channel).is_none());
+    }
+
+    #[test]
+    fn release_channel_upgrade_target_version_returns_version() {
+        let config = make_server_config();
+        let channel = ReleaseChannel::new().set_channel(Channel::Regular);
+        assert_eq!(
+            config.release_channel_upgrade_target_version(&channel),
+            Some("1.31.0")
+        );
+    }
+
+    #[test]
+    fn cluster_without_release_channel_defaults_to_regular() {
+        let cluster = Cluster::default();
+        let channel = cluster.release_channel_or_regular();
+        assert_eq!(channel.channel, Channel::Regular);
+    }
+
+    #[test]
+    fn cluster_without_release_channel_name_is_none() {
+        let cluster = Cluster::default();
+        assert!(cluster.release_channel_name().is_none());
+    }
+
+    #[test]
+    fn cluster_with_release_channel_returns_name() {
+        let cluster = Cluster::default()
+            .set_release_channel(ReleaseChannel::new().set_channel(Channel::Rapid));
+        assert_eq!(cluster.release_channel_name(), Some("RAPID"));
+    }
+}

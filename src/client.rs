@@ -205,3 +205,39 @@ fn announce(cluster: &gke::model::Cluster) {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_args_no_flags_upgrades_full_cluster() {
+        let action = UpgradeAction::from_args(false, None).unwrap();
+        assert!(matches!(action, UpgradeAction::Cluster));
+    }
+
+    #[test]
+    fn from_args_master_flag_upgrades_master_only() {
+        let action = UpgradeAction::from_args(true, None).unwrap();
+        assert!(matches!(action, UpgradeAction::MasterOnly));
+    }
+
+    #[test]
+    fn from_args_master_and_node_pools_is_error() {
+        let result = UpgradeAction::from_args(true, Some(vec!["pool-1".to_string()]));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn from_args_empty_node_pools_upgrades_all_pools() {
+        let action = UpgradeAction::from_args(false, Some(vec![])).unwrap();
+        assert!(matches!(action, UpgradeAction::AllNodePools));
+    }
+
+    #[test]
+    fn from_args_named_node_pools_upgrades_those_pools() {
+        let pools = vec!["pool-1".to_string(), "pool-2".to_string()];
+        let action = UpgradeAction::from_args(false, Some(pools.clone())).unwrap();
+        assert!(matches!(action, UpgradeAction::NodePools(p) if p == pools));
+    }
+}

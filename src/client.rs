@@ -26,6 +26,7 @@ pub struct GkeClient {
     cm: gke::client::ClusterManager,
     location: String,
     project: String,
+    config: gke::model::ServerConfig,
 }
 
 impl GkeClient {
@@ -33,12 +34,21 @@ impl GkeClient {
         let cm = gke::client::ClusterManager::builder().build().await?;
         let location = location.unwrap_or_else(|| "*".to_string());
         let project = project.unwrap_or_else(|| "*".to_string());
+        let config = gke::model::ServerConfig::default();
 
-        Ok(Self {
+        let client = Self {
             cm,
             location,
             project,
-        })
+            config,
+        };
+
+        let config = client.get_server_config().await?;
+        Ok(Self { config, ..client })
+    }
+
+    pub fn config(&self) -> &gke::model::ServerConfig {
+        &self.config
     }
 
     pub async fn pull_up(
@@ -47,9 +57,10 @@ impl GkeClient {
         action: UpgradeAction,
         target: Target,
     ) -> anyhow::Result<()> {
+        let config = self.config();
         let cluster = self.get_cluster(cluster).await?;
         let channel = cluster.release_channel_or_regular();
-        let version = target.find_compatible_version(channel)?;
+        let version = target.find_compatible_version(config, channel)?;
 
         announce(&cluster);
 

@@ -66,7 +66,7 @@ impl Command {
                 node_pools,
             } => {
                 let upgrade_action = UpgradeAction::from_args(master, node_pools)?;
-                let config = gke.get_server_config().await?;
+                let config = gke.config();
                 println!(
                     "Default cluster version: {}",
                     config.default_cluster_version
@@ -81,7 +81,7 @@ impl Command {
                     )
                 });
                 let target = target::Target::new(target, config)
-                    .inspect(|target| println!("cli target: {}", target.short()))?;
+                    .inspect(|target| println!("cli target: {target:?}"))?;
                 gke.pull_up(&cluster, upgrade_action, target).await
             }
         }

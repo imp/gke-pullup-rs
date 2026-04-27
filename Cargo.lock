@@ -576,6 +576,7 @@ dependencies = [
  "google-cloud-container-v1",
  "google-cloud-gax",
  "serde",
+ "serde_json",
  "tokio",
 ]
 

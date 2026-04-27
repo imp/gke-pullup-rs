@@ -102,7 +102,6 @@ impl GkeClient {
     ) -> gke::Result<gke::model::Operation> {
         while operation.status != gke::model::operation::Status::Done {
             operation = self.get_operation(&operation).await?;
-            // println!("Operation: {operation:?}");
             println!(
                 "{} [{}]: {}",
                 operation.operation_type, operation.status, operation.detail

@@ -1,4 +1,4 @@
-use anyhow::Context;
+use anyhow::Context as _;
 use gke::model::ReleaseChannel;
 use gke::model::ServerConfig;
 use gke::model::release_channel::Channel;

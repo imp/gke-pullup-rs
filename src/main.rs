@@ -1,10 +1,31 @@
+#![warn(clippy::cast_possible_truncation)]
+#![warn(clippy::cloned_instead_of_copied)]
+#![warn(clippy::flat_map_option)]
+#![warn(clippy::implicit_clone)]
+#![warn(clippy::map_flatten)]
+#![warn(clippy::map_unwrap_or)]
+#![warn(clippy::unused_trait_names)]
+#![warn(clippy::unused_async)]
+#![warn(clippy::use_self)]
+// #![warn(clippy::large_futures)]
+#![warn(deprecated_in_future)]
+#![warn(future_incompatible)]
+#![warn(noop_method_call)]
+#![warn(missing_debug_implementations)]
+#![warn(rust_2018_compatibility)]
+#![warn(rust_2021_compatibility)]
+#![warn(rust_2024_compatibility)]
+#![warn(rust_2018_idioms)]
+#![warn(unused)]
+#![deny(warnings)]
+
 use clap::Parser;
 use clap::Subcommand;
 use google_cloud_container_v1 as gke;
 
 use client::UpgradeAction;
-use ext::ClusterExt;
-use ext::ServerConfigExt;
+use ext::ClusterExt as _;
+use ext::ServerConfigExt as _;
 use target::Target;
 
 mod client;

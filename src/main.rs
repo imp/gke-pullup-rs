@@ -22,6 +22,7 @@
 use clap::Parser;
 use clap::Subcommand;
 use google_cloud_container_v1 as gke;
+// use serde_json as json;
 
 use client::UpgradeAction;
 use ext::ClusterExt as _;
@@ -34,6 +35,8 @@ mod target;
 
 #[derive(Debug, Parser)]
 struct Cli {
+    #[clap(long, global = true, hide = true)]
+    debug: bool,
     #[clap(long, global = true)]
     location: Option<String>,
     #[clap(long, global = true)]
@@ -44,7 +47,9 @@ struct Cli {
 
 impl Cli {
     fn inspect(self) -> Self {
-        println!("{self:?}");
+        if self.debug {
+            println!("{self:?}");
+        }
         self
     }
 
@@ -75,12 +80,14 @@ enum Command {
         /// latest compatible version for that channel.
         target: Option<String>,
     },
+    /// Print the server config for the current project and location.
+    ServerConfig,
 }
 
 impl Command {
     async fn exec(self, gke: &client::GkeClient) -> anyhow::Result<()> {
         match self {
-            Command::PullUp {
+            Self::PullUp {
                 cluster,
                 target,
                 master,
@@ -88,22 +95,13 @@ impl Command {
             } => {
                 let upgrade_action = UpgradeAction::from_args(master, node_pools)?;
                 let config = gke.config();
-                println!(
-                    "Default cluster version: {}",
-                    config.default_cluster_version
-                );
-
-                config.channels.iter().for_each(|config| {
-                    println!(
-                        "Channel {}: default version {}, upgrade target version {}",
-                        config.channel.name().unwrap_or_default(),
-                        config.default_version,
-                        config.upgrade_target_version
-                    )
-                });
                 let target = target::Target::new(target, config)
                     .inspect(|target| println!("cli target: {target:?}"))?;
                 gke.pull_up(&cluster, upgrade_action, target).await
+            }
+            Self::ServerConfig => {
+                gke.config().show();
+                Ok(())
             }
         }
     }

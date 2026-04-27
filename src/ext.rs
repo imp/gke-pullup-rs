@@ -35,6 +35,8 @@ pub trait ServerConfigExt {
         self.release_channel_config(channel)
             .map(|config| config.upgrade_target_version.as_str())
     }
+
+    fn show(&self);
 }
 
 impl ServerConfigExt for ServerConfig {
@@ -48,6 +50,19 @@ impl ServerConfigExt for ServerConfig {
         self.channels
             .iter()
             .find(|config| config.channel == channel.channel)
+    }
+    fn show(&self) {
+        println!("Default cluster version: {}", self.default_cluster_version);
+        let mut channels = self.channels.iter().collect::<Vec<_>>();
+        channels.sort_by_key(|config| config.channel.value());
+        channels.iter().for_each(|config| {
+            println!(
+                "Channel {}: default version {}, upgrade target version {}",
+                config.channel.name().unwrap_or_default(),
+                config.default_version,
+                config.upgrade_target_version
+            )
+        });
     }
 }
 

@@ -54,7 +54,8 @@ impl Cli {
     }
 
     async fn exec(self) -> anyhow::Result<()> {
-        let gke = client::GkeClient::new(self.location, self.project).await?;
+        let project = self.project.or_else(load_default_project);
+        let gke = client::GkeClient::new(self.location, project).await?;
         self.command.exec(&gke).await
     }
 }
@@ -104,6 +105,20 @@ impl Command {
                 Ok(())
             }
         }
+    }
+}
+
+fn load_default_project() -> Option<String> {
+    let stdout = std::process::Command::new("gcloud")
+        .args(["config", "get", "project"])
+        .output()
+        .ok()?
+        .stdout;
+    let project = String::from_utf8_lossy(&stdout).trim().to_string();
+    if project.is_empty() {
+        None
+    } else {
+        Some(project)
     }
 }
 
